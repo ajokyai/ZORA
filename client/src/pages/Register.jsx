@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useHistory, Link } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
 import './Auth.css'
 
 export default function Register() {
   const { register } = useAuth()
-  const history = useHistory()
+  const navigate = useNavigate()
   const [countries, setCountries] = useState([])
   const [form, setForm] = useState({ email: '', username: '', password: '', display_name: '', phone: '', country_id: '' })
   const [error, setError] = useState('')
@@ -24,7 +24,7 @@ export default function Register() {
     setLoading(true)
     try {
       await register({ ...form, role: 'customer', country_id: form.country_id || undefined })
-      history.push('/dashboard')
+      navigate('/dashboard')
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed')
     } finally {

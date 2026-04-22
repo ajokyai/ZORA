@@ -1,56 +1,57 @@
-import { useState } from 'react'
-import { useHistory, Link } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import './Auth.css'
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import "./Auth.css";
 
 export default function Login() {
-  const { login } = useAuth()
-  const history = useHistory()
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
-  const [form, setForm] = useState({ email: '', password: '' })
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleChange = e =>
-    setForm({ ...form, [e.target.name]: e.target.value })
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = async e => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
-      const user = await login(form.email, form.password)
+      const user = await login(form.email, form.password);
 
-      // ✅ ROLE REDIRECT
-      if (user?.role === 'admin') {
-        history.push('/admin')
+      // ✅ ROLE REDIRECT (v6)
+      if (user?.role === "admin") {
+        navigate("/admin/users");
       } else {
-        history.push('/dashboard')
+        navigate("/dashboard");
       }
-
     } catch (err) {
       if (err.response) {
         if (err.response.status === 401) {
-          setError("Incorrect password")
+          setError("Incorrect password");
         } else if (err.response.status === 404) {
-          setError("User not found")
+          setError("User not found");
         } else {
-          setError(err.response.data?.error || "Login failed")
+          setError(err.response.data?.error || "Login failed");
         }
       } else {
-        setError("Server not reachable")
+        setError("Server not reachable");
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-logo">ZO<span>RA</span></div>
+        <div className="auth-logo">
+          ZO<span>RA</span>
+        </div>
 
         <h1 className="auth-title">Welcome back</h1>
         <p className="auth-sub">Sign in to your ZORA account</p>
@@ -58,7 +59,8 @@ export default function Login() {
         {error && <div className="auth-error">{error}</div>}
 
         <form onSubmit={handleSubmit} className="auth-form">
-          <label>Email
+          <label>
+            Email
             <input
               name="email"
               type="email"
@@ -69,11 +71,13 @@ export default function Login() {
             />
           </label>
 
-          <label>Password
+          <label>
+            Password
             <div style={{ position: "relative" }}>
               <input
                 name="password"
                 type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
                 value={form.password}
                 onChange={handleChange}
                 required
@@ -88,14 +92,13 @@ export default function Login() {
                   top: "50%",
                   transform: "translateY(-50%)",
                   cursor: "pointer",
-                  fontSize: "14px"
+                  fontSize: "14px",
                 }}
               >
                 {showPassword ? "🙈" : "👁️"}
               </span>
             </div>
 
-            {/* 🔥 FORGOT PASSWORD LINK (ADDED HERE) */}
             <div style={{ textAlign: "right", marginTop: "6px" }}>
               <Link
                 to="/forgot-password"
@@ -106,16 +109,11 @@ export default function Login() {
             </div>
           </label>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary"
-          >
-            {loading ? 'Signing in…' : 'Sign In'}
+          <button type="submit" disabled={loading} className="btn-primary">
+            {loading ? "Signing in…" : "Sign In"}
           </button>
         </form>
 
-        {/* WhatsApp Support */}
         <a
           href="https://wa.me/211923198518?text=Hello%20Admin,%20I%20need%20help%20logging%20in"
           target="_blank"
@@ -124,7 +122,7 @@ export default function Login() {
           style={{
             marginTop: "12px",
             display: "block",
-            textAlign: "center"
+            textAlign: "center",
           }}
         >
           Contact Admin on WhatsApp
@@ -135,5 +133,5 @@ export default function Login() {
         </p>
       </div>
     </div>
-  )
+  );
 }

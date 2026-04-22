@@ -7,3 +7,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 bcrypt = Bcrypt()
+
+from flask_mail import Mail
+mail = Mail()
+

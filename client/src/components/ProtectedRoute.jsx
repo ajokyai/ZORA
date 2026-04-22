@@ -1,24 +1,20 @@
-import { Route, Redirect } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-export default function ProtectedRoute({ component: Component, roles, ...rest }) {
-  const { user, loading } = useAuth()
+export default function ProtectedRoute({ roles }) {
+  const { user, loading } = useAuth();
 
-  return (
-    <Route
-      {...rest}
-      render={(props) => {
-        if (loading) return <div>Loading...</div>
+  if (loading) return <div>Loading...</div>;
 
-        if (!user) return <Redirect to="/login" />
+  // Not logged in
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
-        // 🚨 ROLE CHECK (THIS IS WHAT YOU WERE MISSING)
-        if (roles && !roles.includes(user.role)) {
-          return <Redirect to="/dashboard" />
-        }
+  // Role check
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
-        return <Component {...props} />
-      }}
-    />
-  )
+  return <Outlet />;
 }

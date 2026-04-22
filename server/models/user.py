@@ -19,6 +19,11 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(30))
     avatar_url = db.Column(db.String(500))
     country_id = db.Column(db.Integer, db.ForeignKey("countries.id"), nullable=True)
+
+    # Password reset
+    reset_token = db.Column(db.String(100), nullable=True)
+    reset_token_expiry = db.Column(db.DateTime, nullable=True)
+
     country = db.relationship("Country", back_populates="users")
     items = db.relationship("Item", back_populates="seller", lazy="dynamic")
     sent_messages = db.relationship("Message", foreign_keys="Message.sender_id", back_populates="sender", lazy="dynamic")
@@ -45,5 +50,3 @@ class User(UserMixin, db.Model):
         if include_private:
             data["email"] = self.email
         return data
-    
-    

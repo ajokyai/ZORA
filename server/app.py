@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask import Flask, jsonify
 from flask_cors import CORS
-from extensions import db, migrate, login_manager, bcrypt
+from extensions import db, migrate, login_manager, bcrypt,mail
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -34,6 +34,17 @@ def create_app(config=None):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     bcrypt.init_app(app)
+
+     # Mail config
+    app.config["MAIL_SERVER"] = "smtp.gmail.com"
+    app.config["MAIL_PORT"] = 587
+    app.config["MAIL_USE_TLS"] = True
+    app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
+    app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
+
+    from extensions import mail
+    mail.init_app(app)
+
 
     # 4. CORS — allow your Render frontend URL
     allowed_origins = [
@@ -71,7 +82,7 @@ def create_app(config=None):
         return jsonify({"error": "Authentication required"}), 401
 
     from blueprints.auth import auth_bp
-    app.register_blueprint(auth_bp, url_prefix="/api")
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
     from blueprints.items import items_bp
     app.register_blueprint(items_bp, url_prefix="/api")

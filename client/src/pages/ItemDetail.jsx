@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useHistory } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
 import './ItemDetail.css'
@@ -12,7 +12,7 @@ const INSTAGRAM_HANDLE = 'zora.market'
 export default function ItemDetail() {
   const { id } = useParams()
   const { user } = useAuth()
-  const history = useHistory()
+  const navigate = useNavigate()
   const [item, setItem] = useState(null)
   const [country, setCountry] = useState('SS')
   const [loading, setLoading] = useState(true)
@@ -22,19 +22,29 @@ export default function ItemDetail() {
   const [address, setAddress] = useState('')
   const [message, setMessage] = useState('')
   const [activeImg, setActiveImg] = useState(0)
+  const [selectedSize, setSelectedSize] = useState('')
 
   useEffect(() => {
     api.get(`/items/${id}?country=${country}`)
       .then(res => setItem(res.data.item))
-      .catch(() => history.push('/items'))
+      .catch(() => navigate('/items'))
       .finally(() => setLoading(false))
   }, [id, country])
 
   const handleOrder = async () => {
-    if (!user) return history.push('/login')
+    if (!user) return navigate('/login')
+    if (item.sizes?.length > 0 && !selectedSize) {
+      alert('Please select a size before ordering.')
+      return
+    }
     setOrdering(true)
     try {
-      await api.post('/orders', { item_id: item.id, quantity: qty, shipping_address: address || 'Juba Pickup Point' })
+      await api.post('/orders', {
+        item_id: item.id,
+        quantity: qty,
+        shipping_address: address || 'Juba Pickup Point',
+        size: selectedSize || null,
+      })
       setOrdered(true)
     } catch (err) {
       alert(err.response?.data?.error || 'Order failed')
@@ -44,7 +54,7 @@ export default function ItemDetail() {
   }
 
   const handleMessage = async () => {
-    if (!user) return history.push('/login')
+    if (!user) return navigate('/login')
     if (!message.trim()) return
     try {
       await api.post('/messages', { item_id: item.id, body: message })
@@ -56,8 +66,8 @@ export default function ItemDetail() {
   }
 
   const whatsappLink = item
-    ? `https://wa.me/${WHATSAPP_NUMBER}?text=Hi%20ZORA%2C%20I'm%20interested%20in%3A%20${encodeURIComponent(item.name)}`
-    : `https://wa.me/${WHATSAPP_NUMBER}`
+    ? `https://wa.me/${+254729571181}?text=Hi%20ZORA%2C%20I'm%20interested%20in%3A%20${encodeURIComponent(item.name)}`
+    : `https://wa.me/${+254729571181}`
 
   const instagramLink = `https://instagram.com/${INSTAGRAM_HANDLE}`
 
@@ -65,21 +75,19 @@ export default function ItemDetail() {
   if (!item) return null
 
   const hasImages = item.images && item.images.length > 0
+  const hasSizes = item.sizes && item.sizes.length > 0
 
   return (
     <div className="item-detail">
       <div className="item-detail-inner">
-        <button className="back-btn" onClick={() => history.goBack()}>← Back</button>
+        <button className="back-btn" onClick={() => navigate(-1)}>← Back</button>
 
         <div className="item-layout">
 
           {/* ── IMAGE PANEL ── */}
           <div className="item-image-panel">
 
-            {/* Vertical thumbnail strip on the left + main image */}
             <div className="image-viewer">
-
-              {/* Thumbnail strip */}
               {hasImages && item.images.length > 1 && (
                 <div className="thumb-strip">
                   {item.images.map((img, i) => (
@@ -94,13 +102,11 @@ export default function ItemDetail() {
                 </div>
               )}
 
-              {/* Main image */}
               <div className={`main-image-box ${!hasImages || item.images.length <= 1 ? 'full-width' : ''}`}>
                 {hasImages
                   ? <img src={item.images[activeImg]?.url} alt={item.name} className="main-image" />
                   : <span className="item-emoji">{CATEGORY_EMOJI[item.category] || '📦'}</span>}
 
-                {/* Image counter */}
                 {hasImages && item.images.length > 1 && (
                   <div className="image-counter">{activeImg + 1} / {item.images.length}</div>
                 )}
@@ -109,7 +115,6 @@ export default function ItemDetail() {
 
             <span className="item-badge-origin">📍 Sourced from Kampala</span>
 
-            {/* Contact links */}
             <div className="contact-links">
               <p className="contact-title">Contact us directly</p>
               <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="contact-btn whatsapp-btn">
@@ -147,6 +152,29 @@ export default function ItemDetail() {
               </div>
             </div>
 
+            {/* ── SIZES ── */}
+            {hasSizes && (
+              <div className="item-sizes">
+                <p className="sizes-label">
+                  {['clothes'].includes(item.category) ? '👕 Available Sizes' : '👟 Available Sizes'}
+                </p>
+                <div className="sizes-grid">
+                  {item.sizes.map(size => (
+                    <button
+                      key={size}
+                      className={`size-btn ${selectedSize === size ? 'selected' : ''}`}
+                      onClick={() => setSelectedSize(size)}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+                {selectedSize && (
+                  <p className="size-selected-note">✓ Size <strong>{selectedSize}</strong> selected</p>
+                )}
+              </div>
+            )}
+
             <div className="item-stock">
               {item.stock > 0
                 ? <span className="in-stock">✓ {item.stock} available this week</span>
@@ -157,7 +185,7 @@ export default function ItemDetail() {
               <div className="order-success">
                 <strong>Order placed!</strong>
                 <p>Your order ships Sunday and arrives Monday in Juba.</p>
-                <button onClick={() => history.push('/dashboard')} className="btn-primary" style={{marginTop:'1rem'}}>Track my order</button>
+                <button onClick={() => navigate('/dashboard')} className="btn-primary" style={{marginTop:'1rem'}}>Track my order</button>
               </div>
             ) : (
               <div className="order-form">

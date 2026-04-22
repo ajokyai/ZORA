@@ -22,11 +22,11 @@ export default function AdminUsers() {
     }
   }
 
-  const filteredUsers = users.filter(user =>
-    user.email.toLowerCase().includes(search.toLowerCase()) ||
-    user.username.toLowerCase().includes(search.toLowerCase()) ||
-    user.role.toLowerCase().includes(search.toLowerCase())
-  )
+ const filteredUsers = users.filter(user =>
+  (user.email || '').toLowerCase().includes(search.toLowerCase()) ||
+  (user.username || '').toLowerCase().includes(search.toLowerCase()) ||
+  (user.role || '').toLowerCase().includes(search.toLowerCase())
+)
 
   const roleColor = (role) => {
     switch (role) {

@@ -8,26 +8,26 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/me')
+    api.get('/auth/me')
       .then(res => setUser(res.data.user))
       .catch(() => setUser(null))
       .finally(() => setLoading(false))
   }, [])
 
   const login = async (email, password) => {
-    const res = await api.post('/login', { email, password })
+    const res = await api.post('/auth/login', { email, password })
     setUser(res.data.user)
     return res.data.user
   }
 
   const register = async (payload) => {
-    const res = await api.post('/register', payload)
+    const res = await api.post('/auth/register', payload)
     setUser(res.data.user)
     return res.data.user
   }
 
   const logout = async () => {
-    await api.post('/logout')
+    await api.post('/auth/logout')
     setUser(null)
   }
 
