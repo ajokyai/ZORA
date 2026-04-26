@@ -25,7 +25,7 @@ def create_app(config=None):
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "None"
     # 3. Secure cookies in production
-    app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_ENV") == True
+    app.config["SESSION_COOKIE_SECURE"] = True
 
     if config:
         app.config.update(config)
@@ -51,7 +51,8 @@ def create_app(config=None):
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:5175",
-        os.environ.get("FRONTEND_URL", ""),  # e.g. https://zora-client.onrender.com
+        os.environ.get("FRONTEND_URL", ""),
+        os.environ.get("FRONTEND_WWW_URL", ""),                                     # e.g. https://zora-client.onrender.com
     ]
     CORS(
         app,
