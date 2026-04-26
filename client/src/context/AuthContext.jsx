@@ -25,10 +25,15 @@ export function AuthProvider({ children }) {
     setUser(res.data.user)
     return res.data.user
   }
-
-  const logout = async () => {
-    await api.post('/auth/logout')
+ const logout = async () => {
+    try {
+      await api.post('/auth/logout')
+    } catch (e) {
+      // ignore errors, just clear local state
+    }
     setUser(null)
+}
+  
   }
 
   return (
