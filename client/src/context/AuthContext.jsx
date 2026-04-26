@@ -33,7 +33,6 @@ export function AuthProvider({ children }) {
       // ignore errors
     }
     setUser(null)
-}
   }
 
   return (
@@ -41,6 +40,6 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   )
-  
+}
 
 export const useAuth = () => useContext(AuthContext)
