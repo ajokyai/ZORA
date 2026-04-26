@@ -51,8 +51,7 @@ def create_app(config=None):
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:5175",
-        os.environ.get("FRONTEND_URL", ""),
-        os.environ.get("FRONTEND_WWW_URL", ""),                                     # e.g. https://zora-client.onrender.com
+        os.environ.get("FRONTEND_URL", ""),  # e.g. https://zora-client.onrender.com
     ]
     CORS(
         app,
