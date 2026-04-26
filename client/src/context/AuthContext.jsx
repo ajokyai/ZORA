@@ -27,8 +27,13 @@ export function AuthProvider({ children }) {
   }
 
   const logout = async () => {
-    await api.post('/auth/logout')
+    try {
+      await api.post('/auth/logout')
+    } catch (e) {
+      // ignore errors
+    }
     setUser(null)
+}
   }
 
   return (
@@ -36,6 +41,6 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   )
-}
+  
 
 export const useAuth = () => useContext(AuthContext)
