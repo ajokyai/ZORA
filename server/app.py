@@ -23,9 +23,9 @@ def create_app(config=None):
 
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SESSION_COOKIE_HTTPONLY"] = True
-    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SAMESITE"] = "None"
     # 3. Secure cookies in production
-    app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_ENV") == "production"
+    app.config["SESSION_COOKIE_SECURE"] = os.environ.get("FLASK_ENV") == True
 
     if config:
         app.config.update(config)
