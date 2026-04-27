@@ -19,18 +19,23 @@ resend_client = None
 if RESEND_API_KEY:
     resend_client = resend.Resend(api_key=RESEND_API_KEY)
     
-def send_reset_email(to_email, token):
-    if not resend_client:
-        raise Exception("Resend API key not configured")
+  def send_reset_email(to_email, token):
+    api_key = os.environ.get("RESEND_API_KEY")
+
+    if not api_key:
+        raise Exception("Missing RESEND_API_KEY")
+
+    resend.api_key = api_key  # ✅ correct for your version
 
     reset_link = f"{FRONTEND_URL}/reset-password?token={token}"
 
-    resend_client.emails.send({
-        "from": "ZORA <noreply@yourdomain.com>",
+    resend.Emails.send({
+        "from": "ZORA <noreply@zora.llc>",
         "to": [to_email],
-        "subject": "ZORA — Reset Your Password",
-        "html": f"<p>Reset: <a href='{reset_link}'>Click here</a></p>",
-    })
+        "subject": "Reset Password",
+        "html": f"<p><a href='{reset_link}'>Reset Password</a></p>",
+    })  
+
 <!DOCTYPE html>
 <html>
 <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 40px;">
