@@ -59,7 +59,7 @@ CORS(
     app,
     supports_credentials=True,
     origins=[o for o in allowed_origins if o]
-) CORS — allow your Render frontend URL
+) CORS - allow your Render frontend URL
 
     
 
