@@ -21,7 +21,7 @@ def send_reset_email(to_email, token):
 
     resend_client.emails.send({
         # ⚠️ CHANGE THIS to your verified domain
-        "from": "ZORA <noreply@yourdomain.com>",
+        "from": "ZORA <noreply@zora.llc>",
         "to": [to_email],
         "subject": "ZORA — Reset Your Password",
         "html": f"""
