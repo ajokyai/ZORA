@@ -1,10 +1,9 @@
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from flask import Flask, jsonify
 from flask_cors import CORS
-from extensions import db, migrate, login_manager, bcrypt,mail
+from extensions import db, migrate, login_manager, bcrypt, mail
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -16,14 +15,13 @@ def create_app(config=None):
 
     # 2. DATABASE_URL from environment (Render provides this for PostgreSQL)
     database_url = os.environ.get("DATABASE_URL", "sqlite:///zora.db")
-    # Render gives postgres:// but SQLAlchemy needs postgresql://
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "None"
+
     # 3. Secure cookies in production
     app.config["SESSION_COOKIE_SECURE"] = True
 
@@ -35,34 +33,28 @@ def create_app(config=None):
     login_manager.init_app(app)
     bcrypt.init_app(app)
 
-     # Mail config
+    # Mail config
     app.config["MAIL_SERVER"] = "smtp.gmail.com"
     app.config["MAIL_PORT"] = 587
     app.config["MAIL_USE_TLS"] = True
     app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
     app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
-
-    from extensions import mail
     mail.init_app(app)
 
-
-    ## 4. CORS — allow your Render frontend URL
-allowed_origins = [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-    "https://zora.llc",
-    "https://www.zora.llc",
-    os.environ.get("FRONTEND_URL", ""),
-]
-CORS(
-    app,
-    supports_credentials=True,
-    origins=[o for o in allowed_origins if o]
-) 
-#CORS - allow your Render frontend URL
-
-    
+    # 4. CORS - allow your Render frontend URL
+    allowed_origins = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
+        "https://zora.llc",
+        "https://www.zora.llc",
+        os.environ.get("FRONTEND_URL", ""),
+    ]
+    CORS(
+        app,
+        supports_credentials=True,
+        origins=[o for o in allowed_origins if o]
+    )
 
     with app.app_context():
         from models.country import Country
@@ -88,21 +80,16 @@ CORS(
 
     from blueprints.auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
-
     from blueprints.items import items_bp
     app.register_blueprint(items_bp, url_prefix="/api")
-
     from blueprints.orders import orders_bp
     app.register_blueprint(orders_bp, url_prefix="/api")
-
     from blueprints.messages import messages_bp
     app.register_blueprint(messages_bp, url_prefix="/api")
-
     from routes.user_routes import user_bp
     app.register_blueprint(user_bp, url_prefix="/api")
 
     return app
-
 
 # 5. Render-compatible entry point
 if __name__ == "__main__":
