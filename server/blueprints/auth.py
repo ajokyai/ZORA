@@ -16,7 +16,7 @@ if RESEND_API_KEY:
     resend.api_key = RESEND_API_KEY
 
 
-def send_reset_email(to_email, token):
+#def send_reset_email(to_email, token):
     if not RESEND_API_KEY:
         raise Exception("Missing RESEND_API_KEY")
 
