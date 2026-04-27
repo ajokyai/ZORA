@@ -10,55 +10,48 @@ import resend
 auth_bp = Blueprint('auth', __name__)
 
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5175')
-
-
-# ✅ Initialize Resend correctly
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 
-resend_client = None
 if RESEND_API_KEY:
-    resend_client = resend.Resend(api_key=RESEND_API_KEY)
-    
-  def send_reset_email(to_email, token):
-    api_key = os.environ.get("RESEND_API_KEY")
+    resend.api_key = RESEND_API_KEY
 
-    if not api_key:
+
+def send_reset_email(to_email, token):
+    if not RESEND_API_KEY:
         raise Exception("Missing RESEND_API_KEY")
 
-    resend.api_key = api_key  # ✅ correct for your version
-
     reset_link = f"{FRONTEND_URL}/reset-password?token={token}"
+
+    html_template = f"""
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 40px;">
+      <div style="max-width: 480px; margin: auto; background: white; border-radius: 12px; padding: 40px;">
+        <h1 style="color: #f5a623;">ZORA</h1>
+        <h2>Reset Your Password</h2>
+        <p>This link expires in 1 hour.</p>
+
+        <a href="{reset_link}"
+           style="display:inline-block; margin: 20px 0; padding: 12px 24px;
+                  background: #f5a623; color: white; text-decoration: none;
+                  border-radius: 8px;">
+          Reset Password
+        </a>
+
+        <p style="font-size:12px;">
+          Or copy this link:<br/>
+          {reset_link}
+        </p>
+      </div>
+    </body>
+    </html>
+    """
 
     resend.Emails.send({
         "from": "ZORA <noreply@zora.llc>",
         "to": [to_email],
         "subject": "Reset Password",
-        "html": f"<p><a href='{reset_link}'>Reset Password</a></p>",
-    })  
-
-<!DOCTYPE html>
-<html>
-<body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 40px;">
-  <div style="max-width: 480px; margin: auto; background: white; border-radius: 12px; padding: 40px;">
-    <h1 style="color: #f5a623;">ZORA</h1>
-    <h2>Reset Your Password</h2>
-    <p>This link expires in 1 hour.</p>
-
-    <a href="{reset_link}"
-       style="display:inline-block; margin: 20px 0; padding: 12px 24px;
-              background: #f5a623; color: white; text-decoration: none;
-              border-radius: 8px;">
-      Reset Password
-    </a>
-
-    <p style="font-size:12px;">
-      Or copy this link:<br/>
-      {reset_link}
-    </p>
-  </div>
-</body>
-</html>
-"""
+        "html": html_template,
     })
 
 
@@ -72,6 +65,7 @@ def me():
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
+
     user = User.query.filter_by(email=data.get('email')).first()
 
     if not user or not bcrypt.check_password_hash(user.password_hash, data.get('password')):
@@ -110,6 +104,7 @@ def register():
     db.session.commit()
 
     login_user(user, remember=True)
+
     return jsonify({"user": user.to_dict()}), 201
 
 
@@ -120,20 +115,21 @@ def forgot_password():
 
     user = User.query.filter_by(email=email).first()
 
-    # Always return success message (security best practice)
+    # Always return success (security best practice)
     if not user:
         return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
 
     token = secrets.token_urlsafe(32)
     user.reset_token = token
     user.reset_token_expiry = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+
     db.session.commit()
 
     try:
         send_reset_email(email, token)
     except Exception as e:
-        print("EMAIL ERROR:", e)  # 👈 check this in logs
-        return jsonify({"error": "Failed to send reset email. Please try again."}), 500
+        print("EMAIL ERROR:", e)
+        return jsonify({"error": "Failed to send reset email"}), 500
 
     return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
 
@@ -146,15 +142,15 @@ def reset_password():
     new_password = data.get('password', '').strip()
 
     if not token or not new_password:
-        return jsonify({"error": "Token and new password are required"}), 400
+        return jsonify({"error": "Token and password required"}), 400
 
     user = User.query.filter_by(reset_token=token).first()
 
     if not user:
-        return jsonify({"error": "Invalid or expired reset link"}), 400
+        return jsonify({"error": "Invalid or expired token"}), 400
 
-    if user.reset_token_expiry < datetime.datetime.utcnow():
-        return jsonify({"error": "Reset link has expired. Please request a new one."}), 400
+    if user.reset_token_expiry and user.reset_token_expiry < datetime.datetime.utcnow():
+        return jsonify({"error": "Token expired"}), 400
 
     user.password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
     user.reset_token = None
@@ -162,4 +158,4 @@ def reset_password():
 
     db.session.commit()
 
-    return jsonify({"message": "Password reset successful. You can now log in."}), 200
+    return jsonify({"message": "Password reset successful"}), 200
