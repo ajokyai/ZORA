@@ -13,18 +13,24 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5175')
 
 
 # ✅ Initialize Resend correctly
-resend_client = resend.Resend(api_key=os.environ.get("RESEND_API_KEY"))
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 
-
+resend_client = None
+if RESEND_API_KEY:
+    resend_client = resend.Resend(api_key=RESEND_API_KEY)
+    
 def send_reset_email(to_email, token):
+    if not resend_client:
+        raise Exception("Resend API key not configured")
+
     reset_link = f"{FRONTEND_URL}/reset-password?token={token}"
 
     resend_client.emails.send({
-        # ⚠️ CHANGE THIS to your verified domain
-        "from": "ZORA <noreply@zora.llc>",
+        "from": "ZORA <noreply@yourdomain.com>",
         "to": [to_email],
         "subject": "ZORA — Reset Your Password",
-        "html": f"""
+        "html": f"<p>Reset: <a href='{reset_link}'>Click here</a></p>",
+    })
 <!DOCTYPE html>
 <html>
 <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 40px;">
