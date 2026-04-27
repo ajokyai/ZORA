@@ -46,18 +46,22 @@ def create_app(config=None):
     mail.init_app(app)
 
 
-    # 4. CORS — allow your Render frontend URL
-    allowed_origins = [
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:5175",
-        os.environ.get("FRONTEND_URL", ""),  # e.g. https://zora-client.onrender.com
-    ]
-    CORS(
-        app,
-        supports_credentials=True,
-        origins=[o for o in allowed_origins if o]  # filter empty strings
-    )
+    ## 4. CORS — allow your Render frontend URL
+allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "https://zora.llc",
+    "https://www.zora.llc",
+    os.environ.get("FRONTEND_URL", ""),
+]
+CORS(
+    app,
+    supports_credentials=True,
+    origins=[o for o in allowed_origins if o]
+) CORS — allow your Render frontend URL
+
+    
 
     with app.app_context():
         from models.country import Country
