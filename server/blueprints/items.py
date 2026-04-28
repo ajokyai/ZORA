@@ -9,11 +9,12 @@ items_bp = Blueprint("items", __name__)
 
 CATEGORIES = ("clothes", "shoes", "electronics", "beauty", "other")
 
-cloudinary.config(
-    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.environ.get("CLOUDINARY_API_KEY"),
-    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
-)
+def get_cloudinary_options():
+    return {
+        "api_key": os.environ.get("CLOUDINARY_API_KEY"),
+        "api_secret": os.environ.get("CLOUDINARY_API_SECRET"),
+        "cloud_name": os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    }
 
 @items_bp.route("/items", methods=["GET"])
 def get_items():
@@ -68,9 +69,18 @@ def create_item():
     for idx, file in enumerate(files[:5]):
         if file and file.filename:
             try:
-                result = cloudinary.uploader.upload(file, folder="zora/items", public_id=f"item_{item.id}_{idx}", overwrite=True, resource_type="image")
+                result = cloudinary.uploader.upload(
+                    file,
+                    folder="zora/items",
+                    public_id=f"item_{item.id}_{idx}",
+                    overwrite=True,
+                    resource_type="image",
+                    **get_cloudinary_options()
+                )
                 db.session.add(ItemImage(item_id=item.id, url=result["secure_url"], is_primary=(idx == 0)))
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 print(f"Image upload failed: {e}")
     db.session.commit()
     return jsonify({"message": "Item created", "item": item.to_dict()}), 201
@@ -87,7 +97,7 @@ def upload_images(item_id):
     for img in item.images:
         try:
             public_id = "zora/items/" + img.url.split("/")[-1].split(".")[0]
-            cloudinary.uploader.destroy(public_id, resource_type="image")
+            cloudinary.uploader.destroy(public_id, resource_type="image", **get_cloudinary_options())
         except Exception as e:
             print(f"Cloudinary delete failed: {e}")
 
@@ -106,12 +116,15 @@ def upload_images(item_id):
                     folder="zora/items",
                     public_id=f"item_{item_id}_{idx}",
                     overwrite=True,
-                    resource_type="image"
+                    resource_type="image",
+                    **get_cloudinary_options()
                 )
                 img = ItemImage(item_id=item_id, url=result["secure_url"], is_primary=(idx == 0))
                 db.session.add(img)
                 uploaded.append(result["secure_url"])
             except Exception as e:
+                import traceback
+                traceback.print_exc()
                 db.session.rollback()
                 return jsonify({"error": f"Upload failed: {str(e)}"}), 500
 
@@ -126,11 +139,10 @@ def delete_images(item_id):
     if current_user.role != "admin":
         return jsonify({"error": "Forbidden"}), 403
 
-    # Delete from Cloudinary too
     for img in item.images:
         try:
             public_id = "zora/items/" + img.url.split("/")[-1].split(".")[0]
-            cloudinary.uploader.destroy(public_id, resource_type="image")
+            cloudinary.uploader.destroy(public_id, resource_type="image", **get_cloudinary_options())
         except Exception as e:
             print(f"Cloudinary delete failed: {e}")
 
