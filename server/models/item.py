@@ -12,6 +12,7 @@ class Item(db.Model):
     category = db.Column(db.String(50), default="other")
     price_kes = db.Column(db.Float, nullable=False)
     stock = db.Column(db.Integer, default=1)
+    sizes = db.Column(db.String(255), nullable=True)
     shop_name = db.Column(db.String(255), nullable=True)  # e.g. "Kikuubo Market, Kampala"
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
