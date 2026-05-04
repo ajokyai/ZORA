@@ -1,58 +1,37 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
-from extensions import bcrypt, db
+from flask_mail import Message
+from extensions import bcrypt, db, mail
 from models.user import User
 import secrets
 import datetime
 import os
-import resend
 
 auth_bp = Blueprint('auth', __name__)
 
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5175')
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
-
-if RESEND_API_KEY:
-    resend.api_key = RESEND_API_KEY
 
 
 def send_reset_email(to_email, token):
-    if not RESEND_API_KEY:
-        raise Exception("Missing RESEND_API_KEY")
-
     reset_link = f"{FRONTEND_URL}/reset-password?token={token}"
-
-    html_template = f"""
-    <!DOCTYPE html>
-    <html>
-    <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 40px;">
-      <div style="max-width: 480px; margin: auto; background: white; border-radius: 12px; padding: 40px;">
+    msg = Message(
+        subject="Reset Your ZORA Password",
+        sender=f"ZORA <{os.environ.get('MAIL_USERNAME')}>",
+        recipients=[to_email]
+    )
+    msg.html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; padding: 40px;">
         <h1 style="color: #f5a623;">ZORA</h1>
         <h2>Reset Your Password</h2>
         <p>This link expires in 1 hour.</p>
-
-        <a href="{reset_link}"
-           style="display:inline-block; margin: 20px 0; padding: 12px 24px;
-                  background: #f5a623; color: white; text-decoration: none;
-                  border-radius: 8px;">
-          Reset Password
+        <a href="{reset_link}" style="display:inline-block; padding: 12px 24px;
+           background: #f5a623; color: white; text-decoration: none; border-radius: 8px;">
+           Reset Password
         </a>
-
-        <p style="font-size:12px;">
-          Or copy this link:<br/>
-          {reset_link}
-        </p>
-      </div>
-    </body>
-    </html>
+        <p style="font-size:12px; margin-top:20px;">Or copy this link:<br/>{reset_link}</p>
+    </div>
     """
-
-    resend.Emails.send({
-        "from": "ZORA <noreply@zora.llc>",
-        "to": [to_email],
-        "subject": "Reset Password",
-        "html": html_template,
-    })
+    mail.send(msg)
 
 
 @auth_bp.route('/me')
@@ -65,12 +44,9 @@ def me():
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-
     user = User.query.filter_by(email=data.get('email')).first()
-
     if not user or not bcrypt.check_password_hash(user.password_hash, data.get('password')):
         return jsonify({"error": "Invalid credentials"}), 401
-
     login_user(user, remember=True)
     return jsonify({"user": user.to_dict()})
 
@@ -85,10 +61,8 @@ def logout():
 @auth_bp.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
-
     if User.query.filter_by(email=data.get('email')).first():
         return jsonify({"error": "Email already registered"}), 400
-
     user = User(
         email=data['email'],
         username=data['username'],
@@ -97,14 +71,10 @@ def register():
         role=data.get('role', 'customer'),
         country_id=data.get('country_id'),
     )
-
     user.password_hash = bcrypt.generate_password_hash(data['password']).decode('utf-8')
-
     db.session.add(user)
     db.session.commit()
-
     login_user(user, remember=True)
-
     return jsonify({"user": user.to_dict()}), 201
 
 
@@ -112,17 +82,14 @@ def register():
 def forgot_password():
     data = request.get_json()
     email = data.get('email', '').strip()
-
     user = User.query.filter_by(email=email).first()
 
-    # Always return success (security best practice)
     if not user:
         return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
 
     token = secrets.token_urlsafe(32)
     user.reset_token = token
     user.reset_token_expiry = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
-
     db.session.commit()
 
     try:
@@ -137,7 +104,6 @@ def forgot_password():
 @auth_bp.route('/reset-password', methods=['POST'])
 def reset_password():
     data = request.get_json()
-
     token = data.get('token', '').strip()
     new_password = data.get('password', '').strip()
 
@@ -155,7 +121,6 @@ def reset_password():
     user.password_hash = bcrypt.generate_password_hash(new_password).decode('utf-8')
     user.reset_token = None
     user.reset_token_expiry = None
-
     db.session.commit()
 
     return jsonify({"message": "Password reset successful"}), 200
