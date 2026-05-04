@@ -32,3 +32,104 @@
 .product-stock { font-size: 0.75rem; color: var(--success); font-weight: 600; }
 .order-btn { width: 100%; background: var(--navy); color: var(--gold); border: none; border-radius: 8px; padding: 0.65rem; font-size: 0.85rem; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.18s; margin-top: 0.75rem; }
 .order-btn:hover { background: #252542; }
+
+/* Exchange rate bar */
+.exchange-rate-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fffbf2;
+  border: 1px solid #f5e8c0;
+  border-radius: 10px;
+  padding: .6rem 1.1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.rate-label {
+  font-size: 12px;
+  color: #999;
+  font-weight: 500;
+}
+
+.rate-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f5a623;
+}
+
+.rate-date {
+  font-size: 11px;
+  color: #bbb;
+}
+
+.rate-error {
+  color: #e74c3c;
+}
+
+/* Price display */
+.price-ugx {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a2e;
+  display: block;
+}
+
+.price-ssp {
+  font-size: 13px;
+  color: #888;
+  display: block;
+  margin-top: 1px;
+}
+
+.price-ssp--loading {
+  color: #ccc;
+}
+
+.price-secondary {
+  font-size: 12px;
+  color: #bbb;
+  margin-top: 2px;
+}
+
+/* Cart button states */
+.order-btn {
+  width: 100%;
+  padding: 10px;
+  background: #1a1a2e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  margin-top: 10px;
+}
+
+.order-btn:hover:not(:disabled) {
+  background: #f5a623;
+}
+
+.order-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.order-btn--added {
+  background: #27ae60 !important;
+}
+
+/* General primary button */
+.btn-primary {
+  background: #f5a623;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: #e09520; }

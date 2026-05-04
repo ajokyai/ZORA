@@ -13,7 +13,9 @@ class Item(db.Model):
     price_kes = db.Column(db.Float, nullable=False)
     stock = db.Column(db.Integer, default=1)
     sizes = db.Column(db.String(255), nullable=True)
-    shop_name = db.Column(db.String(255), nullable=True)  # e.g. "Kikuubo Market, Kampala"
+    shop_name = db.Column(db.String(255), nullable=True)
+    weight_kg = db.Column(db.Float, default=0.5)        # weight per item in kg
+    origin_city = db.Column(db.String(50), default="Kampala")  # "Kampala" or "Juba"
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -43,6 +45,8 @@ class Item(db.Model):
             "currency_display": currency_code,
             "stock": self.stock,
             "is_active": self.is_active,
+            "weight_kg": self.weight_kg,
+            "origin_city": self.origin_city,
             "images": [img.to_dict() for img in self.images],
             "created_at": self.created_at.isoformat(),
         }

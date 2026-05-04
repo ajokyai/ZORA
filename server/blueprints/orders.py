@@ -1,8 +1,74 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from extensions import db
+import os
+import resend
 
 orders_bp = Blueprint("orders", __name__)
+
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@zora.llc")
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://zora.llc")
+
+if RESEND_API_KEY:
+    resend.api_key = RESEND_API_KEY
+
+
+def notify_admin_new_order(order):
+    """Send admin an email notification when a new order is placed."""
+    if not RESEND_API_KEY:
+        print("[WARN] RESEND_API_KEY not set — skipping admin notification email")
+        return
+
+    item_name = order.item.name if order.item else "[deleted item]"
+    customer_name = order.customer.display_name or order.customer.username
+    customer_email = order.customer.email
+    customer_phone = order.customer.phone or "—"
+    admin_url = f"{FRONTEND_URL}/admin/items"
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <body style="font-family: Arial, sans-serif; background: #f4f4f4; padding: 40px;">
+      <div style="max-width: 520px; margin: auto; background: white; border-radius: 12px; padding: 40px;">
+        <h1 style="color: #f5a623; margin-bottom: 4px;">ZORA</h1>
+        <h2 style="margin-top: 0;">🛒 New Order #{order.id}</h2>
+
+        <table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom:20px;">
+          <tr><td style="padding:6px 0; color:#888; width:140px;">Customer</td><td><strong>{customer_name}</strong></td></tr>
+          <tr><td style="padding:6px 0; color:#888;">Email</td><td>{customer_email}</td></tr>
+          <tr><td style="padding:6px 0; color:#888;">Phone</td><td>{customer_phone}</td></tr>
+          <tr><td style="padding:6px 0; color:#888;">Item</td><td><strong>{item_name}</strong></td></tr>
+          <tr><td style="padding:6px 0; color:#888;">Quantity</td><td>{order.quantity}</td></tr>
+          <tr><td style="padding:6px 0; color:#888;">Total (KES)</td><td><strong>KES {order.total_kes:,.0f}</strong></td></tr>
+          <tr><td style="padding:6px 0; color:#888;">Shipping address</td><td>{order.shipping_address or '—'}</td></tr>
+          <tr><td style="padding:6px 0; color:#888;">Notes</td><td>{order.notes or '—'}</td></tr>
+          <tr><td style="padding:6px 0; color:#888;">Placed at</td><td>{order.created_at.strftime('%d %b %Y %H:%M UTC')}</td></tr>
+        </table>
+
+        <a href="{admin_url}"
+           style="display:inline-block; padding: 12px 28px; background: #f5a623;
+                  color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
+          View in Admin Panel
+        </a>
+
+        <p style="font-size:12px; color:#bbb; margin-top:24px;">
+          You received this because you are an admin at zora.llc
+        </p>
+      </div>
+    </body>
+    </html>
+    """
+
+    try:
+        resend.Emails.send({
+            "from": "ZORA Orders <noreply@zora.llc>",
+            "to": [ADMIN_EMAIL],
+            "subject": f"New Order #{order.id} — {item_name} from {customer_name}",
+            "html": html,
+        })
+    except Exception as e:
+        print(f"[ERROR] Admin notification email failed: {e}")
 
 
 @orders_bp.route("/orders", methods=["POST"])
@@ -42,9 +108,11 @@ def create_order():
         note="Order placed",
         changed_by_id=current_user.id,
     )
-
     db.session.add(history)
     db.session.commit()
+
+    # Notify admin
+    notify_admin_new_order(order)
 
     return jsonify({
         "message": "Order placed",
@@ -60,7 +128,6 @@ def get_orders():
 
     if current_user.role == "admin":
         orders = Order.query.order_by(Order.created_at.desc()).all()
-
     elif current_user.role == "seller":
         orders = (
             Order.query.join(Item)
@@ -68,7 +135,6 @@ def get_orders():
             .order_by(Order.created_at.desc())
             .all()
         )
-
     else:
         orders = (
             Order.query.filter_by(customer_id=current_user.id)
@@ -88,15 +154,10 @@ def get_order(order_id):
     order = Order.query.get_or_404(order_id)
     item = Item.query.get(order.item_id)
 
-    # customer access
     if order.customer_id == current_user.id:
         return jsonify({"order": order.to_dict()}), 200
-
-    # seller access only for own items
-    if current_user.role == "seller" and item.seller_id == current_user.id:
+    if current_user.role == "seller" and item and item.seller_id == current_user.id:
         return jsonify({"order": order.to_dict()}), 200
-
-    # admin access
     if current_user.role == "admin":
         return jsonify({"order": order.to_dict()}), 200
 
@@ -112,10 +173,8 @@ def update_status(order_id):
     order = Order.query.get_or_404(order_id)
     item = Item.query.get(order.item_id)
 
-    # seller can only update own item orders
-    if current_user.role == "seller" and item.seller_id != current_user.id:
+    if current_user.role == "seller" and item and item.seller_id != current_user.id:
         return jsonify({"error": "Not authorized"}), 403
-
     if current_user.role not in ("seller", "admin"):
         return jsonify({"error": "Not authorized"}), 403
 
@@ -128,14 +187,12 @@ def update_status(order_id):
         }), 400
 
     order.status = new_status
-
     history = OrderStatusHistory(
         order_id=order.id,
         status=new_status,
         note=data.get("note"),
         changed_by_id=current_user.id,
     )
-
     db.session.add(history)
     db.session.commit()
 

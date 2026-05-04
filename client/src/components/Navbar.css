@@ -75,3 +75,42 @@
   transition: border-color 0.15s, color 0.15s;
 }
 .btn-logout:hover { border-color: var(--danger); color: #fc8181; }
+
+.cart-nav-btn {
+  position: relative;
+  background: none;
+  border: 1.5px solid #f5a623;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.cart-nav-badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  background: #f5a623;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.navbar-admin-link {
+  background: #1a1a2e;
+  color: #f5a623 !important;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
