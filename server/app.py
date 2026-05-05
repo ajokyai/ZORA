@@ -6,13 +6,10 @@ from flask_cors import CORS
 from extensions import db, migrate, login_manager, bcrypt, mail
 from dotenv import load_dotenv
 load_dotenv()
-
 def create_app(config=None):
     app = Flask(__name__)
-
     # 1. SECRET_KEY from environment
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "fallback-dev-secret")
-
     # 2. DATABASE_URL from environment (Render provides this for PostgreSQL)
     database_url = os.environ.get("DATABASE_URL", "sqlite:///zora.db")
     if database_url.startswith("postgres://"):
@@ -21,18 +18,14 @@ def create_app(config=None):
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "None"
-
     # 3. Secure cookies in production
     app.config["SESSION_COOKIE_SECURE"] = True
-
     if config:
         app.config.update(config)
-
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     bcrypt.init_app(app)
-
     # Mail config
     app.config["MAIL_SERVER"] = "smtp.gmail.com"
     app.config["MAIL_PORT"] = 587
@@ -40,7 +33,6 @@ def create_app(config=None):
     app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME")
     app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD")
     mail.init_app(app)
-
     # 4. CORS - allow your Render frontend URL
     allowed_origins = [
         "http://localhost:5173",
@@ -55,29 +47,23 @@ def create_app(config=None):
         supports_credentials=True,
         origins=[o for o in allowed_origins if o]
     )
-
     with app.app_context():
         from models.country import Country
         from models.user import User
         from models.item import Item, ItemImage
         from models.message import Message
         from models.order import Order, OrderStatusHistory
-
     @app.route("/")
     def home():
         return jsonify({"message": "ZORA backend is running"})
-
     @login_manager.user_loader
     def load_user(user_id):
         from models.user import User
         return User.query.get(int(user_id))
-
     login_manager.login_view = None
-
     @login_manager.unauthorized_handler
     def unauthorized():
         return jsonify({"error": "Authentication required"}), 401
-
     from blueprints.auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     from blueprints.items import items_bp
@@ -88,9 +74,9 @@ def create_app(config=None):
     app.register_blueprint(messages_bp, url_prefix="/api")
     from routes.user_routes import user_bp
     app.register_blueprint(user_bp, url_prefix="/api")
-
+    from blueprints.exchange import exchange_bp
+    app.register_blueprint(exchange_bp, url_prefix="/api")
     return app
-
 # 5. Render-compatible entry point
 if __name__ == "__main__":
     app = create_app()
