@@ -2,29 +2,29 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from extensions import db
 import os
-import resend
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 orders_bp = Blueprint("orders", __name__)
 
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@zora.llc")
+MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", MAIL_USERNAME)
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://zora.llc")
-
-if RESEND_API_KEY:
-    resend.api_key = RESEND_API_KEY
 
 
 def notify_admin_new_order(order):
     """Send admin an email notification when a new order is placed."""
-    if not RESEND_API_KEY:
-        print("[WARN] RESEND_API_KEY not set — skipping admin notification email")
+    if not MAIL_USERNAME or not MAIL_PASSWORD:
+        print("[WARN] MAIL_USERNAME or MAIL_PASSWORD not set — skipping admin notification email")
         return
 
     item_name = order.item.name if order.item else "[deleted item]"
     customer_name = order.customer.display_name or order.customer.username
     customer_email = order.customer.email
     customer_phone = order.customer.phone or "—"
-    admin_url = f"{FRONTEND_URL}/admin/items"
+    admin_url = f"{FRONTEND_URL}/dashboard"
 
     html = f"""
     <!DOCTYPE html>
@@ -49,7 +49,7 @@ def notify_admin_new_order(order):
         <a href="{admin_url}"
            style="display:inline-block; padding: 12px 28px; background: #f5a623;
                   color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
-          View in Admin Panel
+          View in Dashboard
         </a>
 
         <p style="font-size:12px; color:#bbb; margin-top:24px;">
@@ -61,12 +61,17 @@ def notify_admin_new_order(order):
     """
 
     try:
-        resend.Emails.send({
-            "from": "ZORA Orders <noreply@zora.llc>",
-            "to": [ADMIN_EMAIL],
-            "subject": f"New Order #{order.id} — {item_name} from {customer_name}",
-            "html": html,
-        })
+        message = MIMEMultipart("alternative")
+        message["From"] = MAIL_USERNAME
+        message["To"] = ADMIN_EMAIL
+        message["Subject"] = f"New Order #{order.id} — {item_name} from {customer_name}"
+        message.attach(MIMEText(html, "html"))
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(MAIL_USERNAME, MAIL_PASSWORD)
+            server.sendmail(MAIL_USERNAME, ADMIN_EMAIL, message.as_string())
+
+        print(f"[INFO] Admin notification sent for order #{order.id}")
     except Exception as e:
         print(f"[ERROR] Admin notification email failed: {e}")
 
