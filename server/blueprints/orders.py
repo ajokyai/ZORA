@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from extensions import db
 import os
 import smtplib
+import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -11,6 +12,7 @@ orders_bp = Blueprint("orders", __name__)
 MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
 MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://zora.llc")
+EXCHANGE_RATE_API_KEY = os.environ.get("EXCHANGE_RATE_API_KEY")
 
 # Support multiple admin emails separated by commas
 ADMIN_EMAILS = [
@@ -18,6 +20,31 @@ ADMIN_EMAILS = [
     for email in os.environ.get("ADMIN_EMAIL", MAIL_USERNAME or "").split(",")
     if email.strip()
 ]
+
+
+def get_live_rates():
+    """Fetch live KES -> UGX and KES -> SSP rates from ExchangeRate-API."""
+    if not EXCHANGE_RATE_API_KEY:
+        print("[WARN] EXCHANGE_RATE_API_KEY not set — using fallback rates")
+        return {"UGX": 28.5, "SSP": 11.9}  # rough fallback
+
+    try:
+        url = f"https://v6.exchangerate-api.com/v6/{EXCHANGE_RATE_API_KEY}/latest/KES"
+        response = requests.get(url, timeout=5)
+        data = response.json()
+
+        if data.get("result") == "success":
+            rates = data["conversion_rates"]
+            return {
+                "UGX": rates.get("UGX", 28.5),
+                "SSP": rates.get("SSP", 11.9),
+            }
+        else:
+            print(f"[WARN] Exchange rate API error: {data.get('error-type')}")
+            return {"UGX": 28.5, "SSP": 11.9}
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch exchange rates: {e}")
+        return {"UGX": 28.5, "SSP": 11.9}
 
 
 def notify_admin_new_order(order):
@@ -36,6 +63,14 @@ def notify_admin_new_order(order):
     customer_phone = order.customer.phone or "—"
     admin_url = f"{FRONTEND_URL}/dashboard"
 
+    # Total in KES
+    total_kes = order.price_kes_snapshot * order.quantity
+
+    # Fetch live rates and convert
+    rates = get_live_rates()
+    total_ugx = round(total_kes * rates["UGX"], 0)
+    total_ssp = round(total_kes * rates["SSP"], 0)
+
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -50,7 +85,18 @@ def notify_admin_new_order(order):
           <tr><td style="padding:6px 0; color:#888;">Phone</td><td>{customer_phone}</td></tr>
           <tr><td style="padding:6px 0; color:#888;">Item</td><td><strong>{item_name}</strong></td></tr>
           <tr><td style="padding:6px 0; color:#888;">Quantity</td><td>{order.quantity}</td></tr>
-          <tr><td style="padding:6px 0; color:#888;">Total (KES)</td><td><strong>KES {order.total_kes:,.0f}</strong></td></tr>
+          <tr style="background:#fff8e7;">
+            <td style="padding:6px 0; color:#888;">Total (KES)</td>
+            <td><strong>KES {total_kes:,.0f}</strong></td>
+          </tr>
+          <tr style="background:#fff8e7;">
+            <td style="padding:6px 0; color:#888;">Total (UGX)</td>
+            <td><strong>UGX {total_ugx:,.0f}</strong></td>
+          </tr>
+          <tr style="background:#fff8e7;">
+            <td style="padding:6px 0; color:#888;">Total (SSP)</td>
+            <td><strong>SSP {total_ssp:,.0f}</strong></td>
+          </tr>
           <tr><td style="padding:6px 0; color:#888;">Shipping address</td><td>{order.shipping_address or '—'}</td></tr>
           <tr><td style="padding:6px 0; color:#888;">Notes</td><td>{order.notes or '—'}</td></tr>
           <tr><td style="padding:6px 0; color:#888;">Placed at</td><td>{order.created_at.strftime('%d %b %Y %H:%M UTC')}</td></tr>
