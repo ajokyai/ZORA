@@ -10,14 +10,24 @@ orders_bp = Blueprint("orders", __name__)
 
 MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
 MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", MAIL_USERNAME)
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://zora.llc")
+
+# Support multiple admin emails separated by commas
+ADMIN_EMAILS = [
+    email.strip()
+    for email in os.environ.get("ADMIN_EMAIL", MAIL_USERNAME or "").split(",")
+    if email.strip()
+]
 
 
 def notify_admin_new_order(order):
-    """Send admin an email notification when a new order is placed."""
+    """Send all admins an email notification when a new order is placed."""
     if not MAIL_USERNAME or not MAIL_PASSWORD:
         print("[WARN] MAIL_USERNAME or MAIL_PASSWORD not set — skipping admin notification email")
+        return
+
+    if not ADMIN_EMAILS:
+        print("[WARN] ADMIN_EMAIL not set — skipping admin notification email")
         return
 
     item_name = order.item.name if order.item else "[deleted item]"
@@ -61,17 +71,16 @@ def notify_admin_new_order(order):
     """
 
     try:
-        message = MIMEMultipart("alternative")
-        message["From"] = MAIL_USERNAME
-        message["To"] = ADMIN_EMAIL
-        message["Subject"] = f"New Order #{order.id} — {item_name} from {customer_name}"
-        message.attach(MIMEText(html, "html"))
-
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(MAIL_USERNAME, MAIL_PASSWORD)
-            server.sendmail(MAIL_USERNAME, ADMIN_EMAIL, message.as_string())
-
-        print(f"[INFO] Admin notification sent for order #{order.id}")
+            for admin_email in ADMIN_EMAILS:
+                message = MIMEMultipart("alternative")
+                message["From"] = MAIL_USERNAME
+                message["To"] = admin_email
+                message["Subject"] = f"New Order #{order.id} — {item_name} from {customer_name}"
+                message.attach(MIMEText(html, "html"))
+                server.sendmail(MAIL_USERNAME, admin_email, message.as_string())
+                print(f"[INFO] Notification sent to {admin_email} for order #{order.id}")
     except Exception as e:
         print(f"[ERROR] Admin notification email failed: {e}")
 
@@ -116,7 +125,7 @@ def create_order():
     db.session.add(history)
     db.session.commit()
 
-    # Notify admin
+    # Notify all admins
     notify_admin_new_order(order)
 
     return jsonify({
